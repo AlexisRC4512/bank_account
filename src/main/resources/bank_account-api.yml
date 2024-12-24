@@ -290,7 +290,7 @@ components:
           type: string
         type:
           type: string
-          enum: [savings, checking, fixed term]
+          enum: [savings, current, fixed term]
         balance:
           type: number
         openingDate:
@@ -332,7 +332,7 @@ components:
       properties:
         type:
           type: string
-          enum: [savings, checking, fixed term]
+          enum: [savings, current, fixed term]
         balance:
           type: number
         openingDate:
@@ -367,7 +367,7 @@ components:
           type: string
         type:
           type: string
-          enum: [savings, checking, fixed term]
+          enum: [savings, current, fixed term]
         balance:
           type: number
         openingDate:

@@ -6,6 +6,7 @@ import com.nttdata.bank_account.util.AccountTypeDeserializer;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -28,15 +29,16 @@ public class AccountRequest {
         setHolders(holders);
     }
     public void setHolders(List<String> holders) {
-        if (holders.isEmpty()){
+        if (holders == null || holders.isEmpty()) {
+            holders = new ArrayList<>();
             holders.add(getClientId());
         }
         this.holders = holders;
     }
 
     public void setAuthorizedSigners(List<String> authorizedSigners) {
-        if (authorizedSigners.isEmpty()){
-            authorizedSigners.add(getClientId());
+        if (authorizedSigners == null) {
+            authorizedSigners = new ArrayList<>();
         }
         this.authorizedSigners = authorizedSigners;
     }

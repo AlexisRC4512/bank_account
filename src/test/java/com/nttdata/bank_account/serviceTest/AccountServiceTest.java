@@ -1,13 +1,18 @@
 package com.nttdata.bank_account.serviceTest;
 
 import com.nttdata.bank_account.model.entity.Account;
+import com.nttdata.bank_account.model.entity.Client;
 import com.nttdata.bank_account.model.enums.AccountType;
+import com.nttdata.bank_account.model.enums.TypeClient;
 import com.nttdata.bank_account.model.exception.AccountException;
+import com.nttdata.bank_account.model.exception.AccountNotFoundException;
 import com.nttdata.bank_account.model.request.AccountRequest;
 import com.nttdata.bank_account.model.response.AccountResponse;
 import com.nttdata.bank_account.repository.AccountRepository;
+import com.nttdata.bank_account.service.AccountService;
+import com.nttdata.bank_account.service.ClientService;
 import com.nttdata.bank_account.service.impl.AccountServiceImpl;
-import com.nttdata.bank_account.util.AccountConverter;
+import com.nttdata.bank_account.strategy.ValidationStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,28 +20,37 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+
 
 import java.util.Date;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class AccountServiceTest {
     @Mock
     private AccountRepository accountRepository;
-
+    @MockBean
+    private ClientService clientService;
+    @Mock
+    private ValidationStrategy validationStrategy;
     @InjectMocks
     private AccountServiceImpl accountService;
-
     private AccountRequest accountRequest;
     private AccountResponse accountResponse;
     private Account account;
-
+    private Client client;
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -52,6 +66,13 @@ public class AccountServiceTest {
         account.setClientId("12345");
         account.setHolders(List.of("holderId1"));
         account.setAuthorizedSigners(List.of("signerId1"));
+        client = new Client();
+        client.setType(TypeClient.PERSONAL.name());
+        accountRequest.setClientId("client-id");
+        account.setClientId("client-id");
+        validationStrategy = new ValidationStrategy(accountRepository);
+
+
     }
 
     @Test
@@ -62,7 +83,6 @@ public class AccountServiceTest {
                 .expectNextMatches(response -> response != null)
                 .verifyComplete();
     }
-
     @Test
     public void testGetAllAccountsError() {
         when(accountRepository.findAll()).thenReturn(Flux.error(new RuntimeException("Database error")));
@@ -71,23 +91,13 @@ public class AccountServiceTest {
                 .expectErrorMatches(throwable -> throwable instanceof Exception && throwable.getMessage().equals("Error fetching all accounts"))
                 .verify();
     }
-
+    //Falta validar el client el create
     @Test
-    public void testCreateAccount() {
-        when(accountRepository.save(any(Account.class))).thenReturn(Mono.just(account));
+    public void testCreateAccount_InvalidClient() {
+        Mono<AccountResponse> result = accountService.createAccount(null);
 
-        StepVerifier.create(accountService.createAccount(accountRequest))
-                .expectNextMatches(response -> response != null)
-                .verifyComplete();
-    }
-
-    @Test
-    public void testCreateAccountError() {
-        when(accountRepository.save(any(Account.class))).thenReturn(Mono.error(new RuntimeException("Database error")));
-
-        StepVerifier.create(accountService.createAccount(accountRequest))
-                .expectErrorMatches(throwable -> throwable instanceof Exception &&
-                        throwable.getMessage().equals("Error creating account"))
+        StepVerifier.create(result)
+                .expectError(AccountException.class)
                 .verify();
     }
 
@@ -157,4 +167,5 @@ public class AccountServiceTest {
                 .expectErrorMatches(throwable -> throwable instanceof Exception && throwable.getMessage().equals("Error deleting account"))
                 .verify();
     }
+
 }

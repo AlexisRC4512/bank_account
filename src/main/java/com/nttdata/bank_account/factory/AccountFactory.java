@@ -7,7 +7,7 @@ public class AccountFactory {
         switch (accountType.toUpperCase()) {
             case "SAVINGS":
                 return new SavingsAccount();
-            case "CHECKING":
+            case "CURRENT":
                 return new CheckingAccount();
             case "FIXED_TERM":
                 return new FixedTermAccount();
