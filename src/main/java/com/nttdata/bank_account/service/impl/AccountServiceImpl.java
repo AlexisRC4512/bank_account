@@ -157,7 +157,8 @@ public class AccountServiceImpl implements AccountService {
                     account.setBalance(account.getBalance() - transactionRequest.getAmount());
                     Mono<Transaction> transactionUpdate = TransactionConverter.toTransaction(transactionRequest, account.getClientId(), TypeTransaction.WITHDRAWAL, "new Transaction");
                     return updateTransaction(idAccount, transactionUpdate);
-                });
+                }).doOnError(e -> log.error("Error withdrawing ", e))
+                .onErrorMap(e -> new Exception("Error withdrawing account", e));
 
     }
 

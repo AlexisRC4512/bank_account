@@ -1,7 +1,9 @@
 package com.nttdata.bank_account.controller;
 
 import com.nttdata.bank_account.model.request.AccountRequest;
+import com.nttdata.bank_account.model.request.TransactionRequest;
 import com.nttdata.bank_account.model.response.AccountResponse;
+import com.nttdata.bank_account.model.response.TransactionResponse;
 import com.nttdata.bank_account.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -40,8 +42,11 @@ public class AccountController {
 
     @DeleteMapping("/{id_account}")
     public Mono<Void> deleteAccount(@PathVariable("id_account") String id) {
-        accountService.deleteAccount(id);
         return accountService.deleteAccount(id);
 
+    }
+    @PostMapping("/{id_account}/withdraw")
+    public Mono<TransactionResponse> withdrawAccount(@PathVariable("id_account") String idAccount,@Valid @RequestBody TransactionRequest transactionRequest){
+        return accountService.withdraw(idAccount,transactionRequest);
     }
 }
