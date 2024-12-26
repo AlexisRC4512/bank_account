@@ -3,6 +3,8 @@ package com.nttdata.bank_account.controller;
 import com.nttdata.bank_account.model.request.AccountRequest;
 import com.nttdata.bank_account.model.request.TransactionRequest;
 import com.nttdata.bank_account.model.response.AccountResponse;
+import com.nttdata.bank_account.model.response.BalanceResponse;
+import com.nttdata.bank_account.model.response.TransactionAccountResponse;
 import com.nttdata.bank_account.model.response.TransactionResponse;
 import com.nttdata.bank_account.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,4 +51,18 @@ public class AccountController {
     public Mono<TransactionResponse> withdrawAccount(@PathVariable("id_account") String idAccount,@Valid @RequestBody TransactionRequest transactionRequest){
         return accountService.withdraw(idAccount,transactionRequest);
     }
+    @PostMapping("/{id_account}/deposit")
+    public Mono<TransactionResponse> depositAccount(@PathVariable("id_account") String idAccount,@Valid @RequestBody TransactionRequest transactionRequest){
+        return accountService.deposit(idAccount,transactionRequest);
+    }
+    @GetMapping("/{id_client}/balances")
+    public Flux<BalanceResponse> getBalanceAccount(@PathVariable("id_client") String idClient){
+        return accountService.getBalanceByClientId(idClient);
+    }
+    @GetMapping("/{id_account}/transactions")
+    public Mono<TransactionAccountResponse> getTransactionByAccountId(@PathVariable("id_account") String id) {
+        return accountService.getTransactionByAccount(id);
+
+    }
+
 }

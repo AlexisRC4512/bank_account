@@ -3,20 +3,21 @@ package com.nttdata.bank_account.service.impl;
 import com.nttdata.bank_account.model.entity.Account;
 import com.nttdata.bank_account.model.entity.Client;
 import com.nttdata.bank_account.model.entity.Transaction;
-import com.nttdata.bank_account.model.enums.AccountType;
-import com.nttdata.bank_account.model.enums.TypeClient;
 import com.nttdata.bank_account.model.enums.TypeTransaction;
 import com.nttdata.bank_account.model.exception.AccountException;
 import com.nttdata.bank_account.model.exception.AccountNotFoundException;
 import com.nttdata.bank_account.model.request.AccountRequest;
 import com.nttdata.bank_account.model.request.TransactionRequest;
 import com.nttdata.bank_account.model.response.AccountResponse;
+import com.nttdata.bank_account.model.response.BalanceResponse;
+import com.nttdata.bank_account.model.response.TransactionAccountResponse;
 import com.nttdata.bank_account.model.response.TransactionResponse;
 import com.nttdata.bank_account.repository.AccountRepository;
 import com.nttdata.bank_account.service.AccountService;
 import com.nttdata.bank_account.service.ClientService;
 import com.nttdata.bank_account.strategy.ValidationStrategy;
 import com.nttdata.bank_account.util.AccountConverter;
+import com.nttdata.bank_account.util.BalanceConverter;
 import com.nttdata.bank_account.util.TransactionConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +25,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.function.Consumer;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.function.Function;
 
 
@@ -156,24 +157,61 @@ public class AccountServiceImpl implements AccountService {
                     }
                     account.setBalance(account.getBalance() - transactionRequest.getAmount());
                     Mono<Transaction> transactionUpdate = TransactionConverter.toTransaction(transactionRequest, account.getClientId(), TypeTransaction.WITHDRAWAL, "new Transaction");
-                    return updateTransaction(idAccount, transactionUpdate);
+                    return updateTransaction( transactionUpdate,account);
                 }).doOnError(e -> log.error("Error withdrawing ", e))
                 .onErrorMap(e -> new Exception("Error withdrawing account", e));
 
     }
 
-    private Mono<TransactionResponse> updateTransaction(String idAccount, Mono<Transaction> transaction) {
-        Transaction transactionToConverter=transaction.block();
+    @Override
+    public Mono<TransactionResponse> deposit(String idAccount, TransactionRequest transactionRequest) {
+        log.info("deposit mount about account");
+        if (idAccount.isEmpty()){
+            log.warn("Invalid client account: {}", idAccount);
+            return Mono.error(new AccountException("Invalid client data"));
+        }
         return accountRepository.findById(idAccount)
                 .flatMap(account -> {
-                    if (account == null) {
-                        return Mono.error(new AccountException("Account not found"));
-                    }
-                    account.getTransactions().add(transactionToConverter);
-                    accountRepository.save(account);
-                    Mono<TransactionResponse>transactionResponseMono=TransactionConverter.toTransactionResponse(transactionToConverter);
-                    return transactionResponseMono;
-                });
+                    account.setBalance(account.getBalance() + transactionRequest.getAmount());
+                    Mono<Transaction> transactionUpdate = TransactionConverter.toTransaction(transactionRequest, account.getClientId(), TypeTransaction.DEPOSIT, "new Transaction");
+                    return updateTransaction( transactionUpdate,account);
+                }).doOnError(e -> log.error("Error deposit ", e))
+                .onErrorMap(e -> new Exception("Error deposit account", e));
     }
 
-}
+    @Override
+    public Flux<BalanceResponse> getBalanceByClientId(String idClient) {
+        return accountRepository.findByClientId(idClient)
+                .map(account -> {
+                    if (account == null) {
+                        throw new AccountNotFoundException("Account not found with id: " + idClient);
+                    }
+                    return BalanceConverter.toBalanceResponse(Collections.singletonList(account));
+                })
+                .switchIfEmpty(Mono.error(new AccountNotFoundException("Account not found with id: " + idClient)))
+                .doOnError(e -> log.error("Error getting balance for account", e))
+                .onErrorMap(e -> new Exception("Error getting balance for account", e));
+    }
+
+    @Override
+    public Mono<TransactionAccountResponse> getTransactionByAccount(String id) {
+        return accountRepository.findById(id).map(TransactionConverter::toTransactionAccountResponse)
+                .switchIfEmpty(Mono.error(new AccountNotFoundException("account not found with id: " + id)))
+                .doOnError(e -> log.error("Error fetching account with id: {}", id, e))
+                .onErrorMap(e -> new Exception("Error fetching account by id", e));
+    }
+
+
+    private Mono<TransactionResponse> updateTransaction(Mono<Transaction> transactionMono, Account account) {
+        return transactionMono.flatMap(transactionToConverter -> {
+            if (account.getTransactions() == null) {
+                account.setTransactions(new ArrayList<>());
+            }
+            account.getTransactions().add(transactionToConverter);
+            return accountRepository.save(account)
+                    .then(TransactionConverter.toTransactionResponse(transactionToConverter));
+        });
+    }
+    }
+
+

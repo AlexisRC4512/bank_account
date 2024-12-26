@@ -406,6 +406,16 @@ components:
           format: date
         description:
           type: string
+    Balance:
+      type: object
+      properties:
+        accountId:
+          type: string
+        balance:
+          type: number
+        date:
+          type: string
+          format: date
     TransactionRequest:
       type: object
       properties:
@@ -433,8 +443,10 @@ components:
       properties:
         clientId:
           type: string
-        accountBalance:
-          type: number
+        balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/Balance'
     ErrorResponse:
       type: object
       properties:
