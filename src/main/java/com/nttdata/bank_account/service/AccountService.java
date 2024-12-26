@@ -15,4 +15,5 @@ public interface AccountService {
     Mono<AccountResponse> getAccountById(String id);
     Mono<AccountResponse> updateAccount(String id, AccountRequest account);
     Mono<Void> deleteAccount(String id);
+    Mono<TransactionResponse> withdraw(String idAccount ,TransactionRequest transactionRequest);
 }

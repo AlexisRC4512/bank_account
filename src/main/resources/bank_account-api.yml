@@ -416,6 +416,8 @@ components:
     TransactionResponse:
       type: object
       properties:
+        clientId:
+          type: string
         type:
           type: string
           enum: [deposit, withdrawal]
@@ -424,10 +426,8 @@ components:
         date:
           type: string
           format: date
-        transactions:
-          type: array
-          items:
-            $ref: '#/components/schemas/Transaction'
+        description:
+          type: string
     BalanceResponse:
       type: object
       properties:

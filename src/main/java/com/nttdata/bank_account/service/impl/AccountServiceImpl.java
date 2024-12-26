@@ -2,17 +2,22 @@ package com.nttdata.bank_account.service.impl;
 
 import com.nttdata.bank_account.model.entity.Account;
 import com.nttdata.bank_account.model.entity.Client;
+import com.nttdata.bank_account.model.entity.Transaction;
 import com.nttdata.bank_account.model.enums.AccountType;
 import com.nttdata.bank_account.model.enums.TypeClient;
+import com.nttdata.bank_account.model.enums.TypeTransaction;
 import com.nttdata.bank_account.model.exception.AccountException;
 import com.nttdata.bank_account.model.exception.AccountNotFoundException;
 import com.nttdata.bank_account.model.request.AccountRequest;
+import com.nttdata.bank_account.model.request.TransactionRequest;
 import com.nttdata.bank_account.model.response.AccountResponse;
+import com.nttdata.bank_account.model.response.TransactionResponse;
 import com.nttdata.bank_account.repository.AccountRepository;
 import com.nttdata.bank_account.service.AccountService;
 import com.nttdata.bank_account.service.ClientService;
 import com.nttdata.bank_account.strategy.ValidationStrategy;
 import com.nttdata.bank_account.util.AccountConverter;
+import com.nttdata.bank_account.util.TransactionConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,6 +25,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 
@@ -135,7 +141,38 @@ public class AccountServiceImpl implements AccountService {
                 .onErrorMap(e -> new Exception("Error deleting account", e));
     }
 
+    @Override
+    public Mono<TransactionResponse> withdraw(String idAccount, TransactionRequest transactionRequest) {
+        log.info("Witdraw mount about account");
+        if (idAccount.isEmpty()){
+            log.warn("Invalid client account: {}", idAccount);
+            return Mono.error(new AccountException("Invalid client data"));
+        }
+        return accountRepository.findById(idAccount)
+                .flatMap(account -> {
+                    if (account.getBalance() < transactionRequest.getAmount()) {
+                        log.warn("Insufficient balance for account: {}", idAccount);
+                        return Mono.error(new AccountException("Insufficient funds"));
+                    }
+                    account.setBalance(account.getBalance() - transactionRequest.getAmount());
+                    Mono<Transaction> transactionUpdate = TransactionConverter.toTransaction(transactionRequest, account.getClientId(), TypeTransaction.WITHDRAWAL, "new Transaction");
+                    return updateTransaction(idAccount, transactionUpdate);
+                });
 
+    }
 
+    private Mono<TransactionResponse> updateTransaction(String idAccount, Mono<Transaction> transaction) {
+        Transaction transactionToConverter=transaction.block();
+        return accountRepository.findById(idAccount)
+                .flatMap(account -> {
+                    if (account == null) {
+                        return Mono.error(new AccountException("Account not found"));
+                    }
+                    account.getTransactions().add(transactionToConverter);
+                    accountRepository.save(account);
+                    Mono<TransactionResponse>transactionResponseMono=TransactionConverter.toTransactionResponse(transactionToConverter);
+                    return transactionResponseMono;
+                });
+    }
 
 }
