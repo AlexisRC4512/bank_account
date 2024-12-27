@@ -141,7 +141,13 @@ public class AccountServiceImpl implements AccountService {
                 .doOnError(e -> log.error("Error deleting account with id: {}", id, e))
                 .onErrorMap(e -> new Exception("Error deleting account", e));
     }
-
+    /**
+     * Withdraws an amount from the specified account.
+     *
+     * @param idAccount the ID of the account
+     * @param transactionRequest the transaction request containing the amount to withdraw
+     * @return a Mono emitting the TransactionResponse if the withdrawal is successful, or an error if it fails
+     */
     @Override
     public Mono<TransactionResponse> withdraw(String idAccount, TransactionRequest transactionRequest) {
         log.info("Witdraw mount about account");
@@ -162,7 +168,13 @@ public class AccountServiceImpl implements AccountService {
                 .onErrorMap(e -> new Exception("Error withdrawing account", e));
 
     }
-
+    /**
+     * Deposits an amount into the specified account.
+     *
+     * @param idAccount the ID of the account
+     * @param transactionRequest the transaction request containing the amount to deposit
+     * @return a Mono emitting the TransactionResponse if the deposit is successful, or an error if it fails
+     */
     @Override
     public Mono<TransactionResponse> deposit(String idAccount, TransactionRequest transactionRequest) {
         log.info("deposit mount about account");
@@ -178,7 +190,12 @@ public class AccountServiceImpl implements AccountService {
                 }).doOnError(e -> log.error("Error deposit ", e))
                 .onErrorMap(e -> new Exception("Error deposit account", e));
     }
-
+    /**
+     * Retrieves the balance for all accounts associated with the specified client ID.
+     *
+     * @param idClient the ID of the client
+     * @return a Flux emitting BalanceResponse objects for each account, or an error if no accounts are found
+     */
     @Override
     public Flux<BalanceResponse> getBalanceByClientId(String idClient) {
         return accountRepository.findByClientId(idClient)
@@ -192,7 +209,12 @@ public class AccountServiceImpl implements AccountService {
                 .doOnError(e -> log.error("Error getting balance for account", e))
                 .onErrorMap(e -> new Exception("Error getting balance for account", e));
     }
-
+    /**
+     * Retrieves the transaction history for the specified account ID.
+     *
+     * @param id the ID of the account
+     * @return a Mono emitting the TransactionAccountResponse if the account is found, or an error if it is not
+     */
     @Override
     public Mono<TransactionAccountResponse> getTransactionByAccount(String id) {
         return accountRepository.findById(id).map(TransactionConverter::toTransactionAccountResponse)
@@ -201,7 +223,13 @@ public class AccountServiceImpl implements AccountService {
                 .onErrorMap(e -> new Exception("Error fetching account by id", e));
     }
 
-
+    /**
+     * Updates the account with a new transaction and converts it to a TransactionResponse.
+     *
+     * @param transactionMono the Mono emitting the transaction to be added
+     * @param account the account to update
+     * @return a Mono emitting the TransactionResponse
+     */
     private Mono<TransactionResponse> updateTransaction(Mono<Transaction> transactionMono, Account account) {
         return transactionMono.flatMap(transactionToConverter -> {
             if (account.getTransactions() == null) {
