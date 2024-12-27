@@ -53,7 +53,7 @@ public class AccountRequest {
         if (balance < 0) {
             throw new IllegalArgumentException("Balance must be non-negative");
         }
-        this.balance = balance;
+        this.balance = Math.round(balance);
     }
 
     public void setOpeningDate(String openingDate) {

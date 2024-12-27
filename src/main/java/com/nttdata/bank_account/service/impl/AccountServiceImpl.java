@@ -161,7 +161,7 @@ public class AccountServiceImpl implements AccountService {
                         log.warn("Insufficient balance for account: {}", idAccount);
                         return Mono.error(new AccountException("Insufficient funds"));
                     }
-                    account.setBalance(account.getBalance() - transactionRequest.getAmount());
+                    account.setBalance(Math.round(account.getBalance() - transactionRequest.getAmount()));
                     Mono<Transaction> transactionUpdate = TransactionConverter.toTransaction(transactionRequest, account.getClientId(), TypeTransaction.WITHDRAWAL, "new Transaction");
                     return updateTransaction( transactionUpdate,account);
                 }).doOnError(e -> log.error("Error withdrawing ", e))
@@ -184,7 +184,7 @@ public class AccountServiceImpl implements AccountService {
         }
         return accountRepository.findById(idAccount)
                 .flatMap(account -> {
-                    account.setBalance(account.getBalance() + transactionRequest.getAmount());
+                    account.setBalance(Math.round(account.getBalance() + transactionRequest.getAmount()));
                     Mono<Transaction> transactionUpdate = TransactionConverter.toTransaction(transactionRequest, account.getClientId(), TypeTransaction.DEPOSIT, "new Transaction");
                     return updateTransaction( transactionUpdate,account);
                 }).doOnError(e -> log.error("Error deposit ", e))
