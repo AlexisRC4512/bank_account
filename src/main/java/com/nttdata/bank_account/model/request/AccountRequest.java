@@ -34,8 +34,7 @@ public class AccountRequest {
 
     public void setNumberAccount(Integer numberAccount) {
         if (numberAccount.toString().length() < 8) {
-            throw new IllegalArgumentException("El número de cuenta debe tener al menos 8 caracteres.");
-        }
+            throw new IllegalArgumentException("The account number must have at least 8 characters.");        }
         this.numberAccount = numberAccount;
     }
 

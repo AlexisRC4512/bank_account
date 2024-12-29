@@ -3,7 +3,6 @@ package com.nttdata.bank_account.util;
 import com.nttdata.bank_account.model.entity.Account;
 import com.nttdata.bank_account.model.entity.Transaction;
 import com.nttdata.bank_account.model.enums.TypeTransaction;
-import com.nttdata.bank_account.model.exception.AccountException;
 import com.nttdata.bank_account.model.request.TransactionRequest;
 import com.nttdata.bank_account.model.response.TransactionAccountResponse;
 import com.nttdata.bank_account.model.response.TransactionResponse;
