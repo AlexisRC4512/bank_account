@@ -54,7 +54,7 @@ public class AccountServiceTest {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        accountRequest = new AccountRequest(AccountType.SAVINGS, 1000.0, "2024-12-21", "12345", List.of("holderId1"), List.of("signerId1"));
+        accountRequest = new AccountRequest(AccountType.SAVINGS, 1000.0, "2024-12-21", "12345", List.of("holderId1"), List.of("signerId1"),98231349);
         accountResponse = new AccountResponse();
         account = new Account();
         account.setId("12345");

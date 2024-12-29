@@ -29,7 +29,10 @@ public class Account {
      * Type of the account.
      */
     private AccountType type;
-
+    /**
+     * Number of the account.
+     */
+    private Integer numberAccount;
     /**
      * Balance of the account.
      */
