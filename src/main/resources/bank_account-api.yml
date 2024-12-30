@@ -223,6 +223,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /v1/account/external:
+    post:
+      summary: Transfer between different customer accounts
+      operationId: postClientTransfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '200':
+          description: Client transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+        '404':
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/account/internal:
+    post:
+      summary: Transfer between same customer accounts
+      operationId: postClientSameTransfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '200':
+          description: Client transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+        '404':
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/account/{id_account}/balances:
     get:
       summary: Get client balances
@@ -293,6 +351,8 @@ components:
           enum: [savings, current, fixed term]
         balance:
           type: number
+        numberAccount:
+          type: number
         openingDate:
           type: string
           format: date
@@ -317,19 +377,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Transaction'
-        balances:
-          type: object
-          properties:
-            clientId:
-              type: string
-            creditBalance:
-              type: number
-            date:
-              type: string
-              format: date
+        transactionCount:
+          type: number
+    Commission:
+      type: object
+      properties:
+        _id:
+          type: string
+        accountId:
+          type: string
+        clientId:
+          type: string
+        amount:
+          type: number
+        date:
+          type: string
+          format: date
+        description:
+          type: number
+        maintenanceFee:
+          type: string
     AccountRequest:
       type: object
       properties:
+        numberAccount:
+          type: number
         type:
           type: string
           enum: [savings, current, fixed term]
@@ -355,11 +427,14 @@ components:
           items:
             type: string
             description: Client ID of the authorized signers
+        transactionCount:
+          type: number
       required:
         - type
         - balance
         - openingDate
         - clientId
+        - numberAccount
     AccountResponse:
       type: object
       properties:
@@ -432,6 +507,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Transaction'
+    TransferRequest:
+      type: object
+      properties:
+        fromAccountNumber:
+          type: number
+        toAccountNumber:
+          type: number
+        amount:
+          type: number
+      required:
+        - fromAccountNumber
+        - toAccountNumber
+        - amount
     BalanceResponse:
       type: object
       properties:
@@ -441,6 +529,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Balance'
+    TransferResponse:
+      type: object
+      properties:
+        fromAccountNumber:
+          type: number
+        toAccountNumber:
+          type: number
+        amount:
+          type: number
     ErrorResponse:
       type: object
       properties:

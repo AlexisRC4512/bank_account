@@ -5,11 +5,9 @@ import com.nttdata.bank_account.model.entity.Client;
 import com.nttdata.bank_account.model.enums.AccountType;
 import com.nttdata.bank_account.model.enums.TypeClient;
 import com.nttdata.bank_account.model.exception.AccountException;
-import com.nttdata.bank_account.model.exception.AccountNotFoundException;
 import com.nttdata.bank_account.model.request.AccountRequest;
 import com.nttdata.bank_account.model.response.AccountResponse;
 import com.nttdata.bank_account.repository.AccountRepository;
-import com.nttdata.bank_account.service.AccountService;
 import com.nttdata.bank_account.service.ClientService;
 import com.nttdata.bank_account.service.impl.AccountServiceImpl;
 import com.nttdata.bank_account.strategy.ValidationStrategy;
@@ -20,11 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -34,7 +28,6 @@ import java.util.Date;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,7 +47,7 @@ public class AccountServiceTest {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        accountRequest = new AccountRequest(AccountType.SAVINGS, 1000.0, "2024-12-21", "12345", List.of("holderId1"), List.of("signerId1"),98231349);
+        accountRequest = new AccountRequest(AccountType.SAVINGS, 1000.0, "2024-12-21", "12345", List.of("holderId1"), List.of("signerId1"),98231349,1);
         accountResponse = new AccountResponse();
         account = new Account();
         account.setId("12345");
@@ -93,7 +86,7 @@ public class AccountServiceTest {
     }
     //Falta validar el client el create
     @Test
-    public void testCreateAccount_InvalidClient() {
+    public void testCreateAccountInvalidClient() {
         Mono<AccountResponse> result = accountService.createAccount(null);
 
         StepVerifier.create(result)

@@ -67,6 +67,13 @@ public class GlobalExceptionHandler {
         errorResponse.setMessage(ex.getMessage());
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
+    @ExceptionHandler(InsufficientFundsException.class)
+    public ResponseEntity<String> handleInsufficientFundsException(InsufficientFundsException ex) {
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setError("Insufficient funds.");
+        errorResponse.setMessage(ex.getMessage());
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
 
     /**
      * Handles generic exceptions.

@@ -3,9 +3,7 @@ package com.nttdata.bank_account.util;
 import com.nttdata.bank_account.model.entity.Account;
 import com.nttdata.bank_account.model.entity.Balance;
 import com.nttdata.bank_account.model.response.BalanceResponse;
-import reactor.core.publisher.Flux;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;

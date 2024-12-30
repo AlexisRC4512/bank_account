@@ -3,7 +3,6 @@ package com.nttdata.bank_account.model.request;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.nttdata.bank_account.model.enums.AccountType;
 import com.nttdata.bank_account.util.AccountTypeDeserializer;
-import io.swagger.models.auth.In;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -21,8 +20,9 @@ public class AccountRequest {
     private List<String> holders;
     private List<String> authorizedSigners;
     private Integer numberAccount;
-
-    public AccountRequest(AccountType type, double balance, String openingDate, String clientId,List<String> holders,List<String> authorizedSigners,Integer numberAccount) {
+    private int transactionCount;
+    public AccountRequest(AccountType type, double balance, String openingDate, String clientId,
+                          List<String> holders,List<String> authorizedSigners,Integer numberAccount,int transactionCount) {
         setType(type);
         setBalance(balance);
         setOpeningDate(openingDate);
@@ -30,11 +30,20 @@ public class AccountRequest {
         setAuthorizedSigners(authorizedSigners);
         setHolders(holders);
         setNumberAccount(numberAccount);
+        setTransactionCount(transactionCount);
+    }
+
+    public void setTransactionCount(int transactionCount) {
+        if (transactionCount < 0) {
+            throw new IllegalArgumentException("transactionCount must be non-negative");
+        }
+        this.transactionCount = transactionCount;
     }
 
     public void setNumberAccount(Integer numberAccount) {
         if (numberAccount.toString().length() < 8) {
-            throw new IllegalArgumentException("The account number must have at least 8 characters.");        }
+            throw new IllegalArgumentException("The account number must have at least 8 characters.");
+        }
         this.numberAccount = numberAccount;
     }
 

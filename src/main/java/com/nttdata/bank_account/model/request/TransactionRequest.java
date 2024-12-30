@@ -12,7 +12,7 @@ public class TransactionRequest {
     }
 
     public void setAmount(Double amount) {
-        if (amount<0 || amount==null){
+        if (amount < 0 || amount == null) {
             throw new IllegalArgumentException("amount is null or amount less than 0");
         }
         this.amount = amount;

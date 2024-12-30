@@ -24,6 +24,7 @@ public class AccountConverter {
         accountResponse.setAuthorizedSigners(account.getAuthorizedSigners());
         accountResponse.setTransactions(account.getTransactions());
         accountResponse.setNumberAccount(account.getNumberAccount());
+        accountResponse.setTransactionCount(account.getTransactionCount());
         return accountResponse;
     }
 
@@ -36,6 +37,7 @@ public class AccountConverter {
         account.setClientId(request.getClientId());
         account.setNumberAccount(request.getNumberAccount());
         account.setHolders(request.getHolders());
+        account.setTransactionCount(request.getTransactionCount());
         account.setAuthorizedSigners(request.getAuthorizedSigners());
         AccountTypeInterface accountType = accountFactory.getAccountType(request.getType().name());
         accountType.applyAccountRules(account);

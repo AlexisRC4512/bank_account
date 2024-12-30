@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Date;
 
-public class TransactionConverter{
+public class TransactionConverter {
     public static Mono<Transaction> toTransaction(TransactionRequest transactionRequest, String clientId, TypeTransaction type, String description) {
         if (transactionRequest == null) {
             return Mono.error(new IllegalArgumentException("TransactionRequest is null"));

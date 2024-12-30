@@ -2,10 +2,8 @@ package com.nttdata.bank_account.service;
 
 import com.nttdata.bank_account.model.request.AccountRequest;
 import com.nttdata.bank_account.model.request.TransactionRequest;
-import com.nttdata.bank_account.model.response.AccountResponse;
-import com.nttdata.bank_account.model.response.BalanceResponse;
-import com.nttdata.bank_account.model.response.TransactionAccountResponse;
-import com.nttdata.bank_account.model.response.TransactionResponse;
+import com.nttdata.bank_account.model.request.TransferRequest;
+import com.nttdata.bank_account.model.response.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -21,5 +19,7 @@ public interface AccountService {
     Mono<TransactionResponse> deposit(String idAccount ,TransactionRequest transactionRequest);
     Flux<BalanceResponse> getBalanceByClientId(String idClient);
     Mono<TransactionAccountResponse>getTransactionByAccount(String idAccount);
+    Mono<TransferResponse>transferInternal(TransferRequest request);
+    Mono<TransferResponse>transferExternal(TransferRequest request);
 
 }

@@ -1,5 +1,6 @@
 package com.nttdata.bank_account.configuration;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -8,15 +9,28 @@ import org.springframework.web.reactive.function.client.WebClient;
  */
 @Configuration
 public class WebClientConfig {
+
+    @Value("${server.url.client}")
+    private String clientUrl;
+
+    @Value("${server.url.credit.card}")
+    private String creditCardUrl;
     /**
      * Creates and configures a WebClient bean.
      *
      * @return a configured WebClient instance
      */
     @Bean
-    public WebClient webClient(){
+    public WebClient webClient() {
         return WebClient.builder()
-                .baseUrl("http://localhost:8085")
+                .baseUrl(clientUrl)
+                .defaultHeader("Content-Type", "application/json")
+                .build();
+    }
+    @Bean
+    public WebClient webClientCreditCard() {
+        return WebClient.builder()
+                .baseUrl(creditCardUrl)
                 .defaultHeader("Content-Type", "application/json")
                 .build();
     }
