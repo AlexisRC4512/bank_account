@@ -29,7 +29,10 @@ public class Account {
      * Type of the account.
      */
     private AccountType type;
-
+    /**
+     * Number of the account.
+     */
+    private int numberAccount;
     /**
      * Balance of the account.
      */
@@ -69,4 +72,11 @@ public class Account {
      * List of transactions associated with the account.
      */
     private List<Transaction> transactions;
+    /**
+     * Number of transaction completed.
+     */
+    private int transactionCount;
+    public void incrementTransactionCount() {
+        this.transactionCount++;
+    }
 }

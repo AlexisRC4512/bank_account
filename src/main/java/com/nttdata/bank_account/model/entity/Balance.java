@@ -1,5 +1,6 @@
 package com.nttdata.bank_account.model.entity;
 
+import com.nttdata.bank_account.model.enums.AccountType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,9 +17,9 @@ import java.util.Date;
 @Setter
 public class Balance {
     /**
-     * Client ID.
+     * Account ID.
      */
-    private String clientId;
+    private String accountId;
 
     /**
      * Credit balance of the client.
@@ -29,4 +30,13 @@ public class Balance {
      * Date of the balance.
      */
     private Date date;
+    /**
+     * Type of the account.
+     */
+    private AccountType accountType;
+
+    public Balance(String id, double balance) {
+    }
+
+
 }

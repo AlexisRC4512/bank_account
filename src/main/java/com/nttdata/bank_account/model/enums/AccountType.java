@@ -2,6 +2,6 @@ package com.nttdata.bank_account.model.enums;
 
 public enum AccountType {
     SAVINGS,
-    CHECKING,
+    CURRENT,
     FIXED_TERM
 }
