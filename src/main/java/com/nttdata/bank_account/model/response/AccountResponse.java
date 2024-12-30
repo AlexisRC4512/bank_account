@@ -24,4 +24,6 @@ public class AccountResponse {
     private List<String> holders;
     private List<String> authorizedSigners;
     private List<Transaction> transactions;
+    private Integer numberAccount;
+    private int transactionCount;
 }

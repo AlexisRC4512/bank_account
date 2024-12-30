@@ -6,6 +6,7 @@ import com.nttdata.bank_account.util.AccountTypeDeserializer;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -18,25 +19,45 @@ public class AccountRequest {
     private String clientId;
     private List<String> holders;
     private List<String> authorizedSigners;
-
-    public AccountRequest(AccountType type, double balance, String openingDate, String clientId,List<String> holders,List<String> authorizedSigners) {
+    private Integer numberAccount;
+    private int transactionCount;
+    public AccountRequest(AccountType type, double balance, String openingDate, String clientId,
+                          List<String> holders,List<String> authorizedSigners,Integer numberAccount,int transactionCount) {
         setType(type);
         setBalance(balance);
         setOpeningDate(openingDate);
         setClientId(clientId);
         setAuthorizedSigners(authorizedSigners);
         setHolders(holders);
+        setNumberAccount(numberAccount);
+        setTransactionCount(transactionCount);
     }
+
+    public void setTransactionCount(int transactionCount) {
+        if (transactionCount < 0) {
+            throw new IllegalArgumentException("transactionCount must be non-negative");
+        }
+        this.transactionCount = transactionCount;
+    }
+
+    public void setNumberAccount(Integer numberAccount) {
+        if (numberAccount.toString().length() < 8) {
+            throw new IllegalArgumentException("The account number must have at least 8 characters.");
+        }
+        this.numberAccount = numberAccount;
+    }
+
     public void setHolders(List<String> holders) {
-        if (holders.isEmpty()){
+        if (holders == null || holders.isEmpty()) {
+            holders = new ArrayList<>();
             holders.add(getClientId());
         }
         this.holders = holders;
     }
 
     public void setAuthorizedSigners(List<String> authorizedSigners) {
-        if (authorizedSigners.isEmpty()){
-            authorizedSigners.add(getClientId());
+        if (authorizedSigners == null) {
+            authorizedSigners = new ArrayList<>();
         }
         this.authorizedSigners = authorizedSigners;
     }
@@ -51,7 +72,7 @@ public class AccountRequest {
         if (balance < 0) {
             throw new IllegalArgumentException("Balance must be non-negative");
         }
-        this.balance = balance;
+        this.balance = Math.round(balance);
     }
 
     public void setOpeningDate(String openingDate) {
