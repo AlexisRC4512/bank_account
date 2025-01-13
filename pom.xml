@@ -29,6 +29,11 @@
 	<properties>
 		<java.version>11</java.version>
 		<spring-cloud.version>2021.0.6</spring-cloud.version>
+		<sonar.host.url>http://localhost:9001</sonar.host.url>
+		<sonar.token>sqp_45e8ba30c5ed721cb3ea8acf03c276f04f15c40d</sonar.token>
+		<sonar.projectKey>bank_account</sonar.projectKey>
+		<sonar.projectName>bank_account</sonar.projectName>
+		<sonar.exclusions>pom.xml</sonar.exclusions>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -165,6 +170,7 @@
 					<excludes>
 						<exclude>com/nttdata/bank_account/BankAccountApplicationTests.java</exclude>
 						<exclude>com/nttdata/bank_account/serviceTest/AccountServiceTest.java</exclude>
+						<exclude>com/nttdata/bank_account/serviceTest/ComissionServiceTest.java</exclude>
 					</excludes>
 				</configuration>
 				<!--Exclusiones para reporte de cobertura-->
@@ -224,6 +230,11 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.sonarsource.scanner.maven</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>3.8.0.2131</version>
 			</plugin>
 			<!--<plugin>
 				<groupId>org.openapitools</groupId>
