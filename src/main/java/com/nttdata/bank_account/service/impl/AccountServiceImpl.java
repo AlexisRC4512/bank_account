@@ -24,8 +24,9 @@ import com.nttdata.bank_account.util.AccountConverter;
 import com.nttdata.bank_account.util.BalanceConverter;
 import com.nttdata.bank_account.util.ComissionConverter;
 import com.nttdata.bank_account.util.TransactionConverter;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -44,16 +45,19 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class AccountServiceImpl implements AccountService {
-    @Autowired
-    private AccountRepository accountRepository;
-    @Autowired
-    private ClientService clientService;
-    @Autowired
-    private ValidationStrategy validationStrategy;
-    @Autowired
+    private  AccountRepository accountRepository;
+    private  ClientService clientService;
+    private  ValidationStrategy validationStrategy;
     private CommissionRepository commissionRepository;
-    @Autowired
-    private CreditCardService creditCardService;
+    private  CreditCardService creditCardService;
+
+    public AccountServiceImpl(AccountRepository accountRepository, ClientService clientService, ValidationStrategy validationStrategy, CommissionRepository commissionRepository, CreditCardService creditCardService) {
+        this.accountRepository = accountRepository;
+        this.clientService = clientService;
+        this.validationStrategy = validationStrategy;
+        this.commissionRepository = commissionRepository;
+        this.creditCardService = creditCardService;
+    }
 
     /**
      * Retrieves all accounts.
@@ -61,6 +65,8 @@ public class AccountServiceImpl implements AccountService {
      * @return a flux of account responses.
      */
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackGetAllAccounts")
+    @TimeLimiter(name = "bank-account")
     public Flux<AccountResponse> getAllAccounts() {
         log.info("Fetching all Accounts");
         return accountRepository.findAll()
@@ -75,6 +81,8 @@ public class AccountServiceImpl implements AccountService {
      * @return an account response.
      */
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackCreateAccount")
+    @TimeLimiter(name = "bank-account")
     public Mono<AccountResponse> createAccount(AccountRequest account) {
         if (account == null) {
             log.warn("Invalid client account: {}", account);
@@ -129,6 +137,8 @@ public class AccountServiceImpl implements AccountService {
      * @return an account response.
      */
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackGetAccountById")
+    @TimeLimiter(name = "bank-account")
     public Mono<AccountResponse> getAccountById(String id) {
         log.info("Fetching account with id: {}", id);
         return accountRepository.findById(id)
@@ -146,6 +156,8 @@ public class AccountServiceImpl implements AccountService {
      * @return an account response.
      */
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackUpdateAccount")
+    @TimeLimiter(name = "bank-account")
     public Mono<AccountResponse> updateAccount(String id, AccountRequest account) {
         log.info("Updating account with id: {}", id);
         return accountRepository.findById(id)
@@ -167,6 +179,8 @@ public class AccountServiceImpl implements AccountService {
      * @return a void Mono.
      */
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackDeleteAccount")
+    @TimeLimiter(name = "bank-account")
     public Mono<Void> deleteAccount(String id) {
         log.info("Deleting account with id: {}", id);
         return accountRepository.findById(id)
@@ -183,6 +197,8 @@ public class AccountServiceImpl implements AccountService {
      * @return a Mono emitting the TransactionResponse if the withdrawal is successful, or an error if it fails
      */
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackWithdraw")
+    @TimeLimiter(name = "bank-account")
     public Mono<TransactionResponse> withdraw(String idAccount, TransactionRequest transactionRequest) {
         log.info("Witdraw mount about account");
         if (idAccount.isEmpty()) {
@@ -215,6 +231,8 @@ public class AccountServiceImpl implements AccountService {
      * @return a Mono emitting the TransactionResponse if the deposit is successful, or an error if it fails
      */
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackDeposit")
+    @TimeLimiter(name = "bank-account")
     public Mono<TransactionResponse> deposit(String idAccount, TransactionRequest transactionRequest) {
         log.info("deposit mount about account");
         if (idAccount.isEmpty()) {
@@ -241,6 +259,8 @@ public class AccountServiceImpl implements AccountService {
      * @return a Flux emitting BalanceResponse objects for each account, or an error if no accounts are found
      */
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackGetBalanceByClientId")
+    @TimeLimiter(name = "bank-account")
     public Flux<BalanceResponse> getBalanceByClientId(String idClient) {
         return accountRepository.findByClientId(idClient)
                 .map(account -> {
@@ -260,6 +280,8 @@ public class AccountServiceImpl implements AccountService {
      * @return a Mono emitting the TransactionAccountResponse if the account is found, or an error if it is not
      */
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackGetTransactionByAccount")
+    @TimeLimiter(name = "bank-account")
     public Mono<TransactionAccountResponse> getTransactionByAccount(String id) {
         return accountRepository.findById(id).map(TransactionConverter::toTransactionAccountResponse)
                 .switchIfEmpty(Mono.error(new AccountNotFoundException("account not found with id: " + id)))
@@ -268,6 +290,8 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackTransferInternal")
+    @TimeLimiter(name = "bank-account")
     public Mono<TransferResponse> transferInternal(TransferRequest request) {
         return accountRepository.findByNumberAccount(request.getFromAccountNumber())
                 .switchIfEmpty(Mono.error(new AccountNotFoundException("account not found with getFromAccountNumber ")))
@@ -291,6 +315,8 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackTransferExternal")
+    @TimeLimiter(name = "bank-account")
     public Mono<TransferResponse> transferExternal(TransferRequest request) {
         return accountRepository.findByNumberAccount(request.getFromAccountNumber())
                 .switchIfEmpty(Mono.error(new AccountNotFoundException("account not found with getFromAccountId ")))
@@ -315,6 +341,18 @@ public class AccountServiceImpl implements AccountService {
                             .then(accountRepository.save(toAccount))
                             .then(Mono.just(new TransferResponse(request.getFromAccountNumber(), request.getToAccountNumber(), request.getAmount())));
                 });
+    }
+
+    @Override
+    @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackGetAccountByClientId")
+    @TimeLimiter(name = "bank-account")
+    public Flux<AccountResponse> getAccountByClientId(String clientId) {
+        return accountRepository.findByClientId(clientId)
+                .switchIfEmpty(Mono.error(new AccountNotFoundException("account not fetching with clientId ")))
+                .map(AccountConverter::toAccountResponse)
+                .doOnError(e -> log.error("Error fetching account with Client id: {}", clientId, e))
+                .onErrorMap(e -> new Exception("Error fetching account by Client id", e));
+
     }
 
     /**
@@ -347,6 +385,63 @@ public class AccountServiceImpl implements AccountService {
         return Mono.empty();
     };
 
+    public Flux<AccountResponse> fallbackGetAllAccounts(Exception exception) {
+        log.error("Fallback method for getAllAccounts", exception);
+        return Flux.error(new Exception("Fallback method for createAccount"));
+    }
+
+    public Mono<AccountResponse> fallbackCreateAccount(Exception exception) {
+        log.error("Fallback method for createAccount", exception);
+        return Mono.error(new Exception("Fallback method for createAccount"));
+    }
+
+    public Mono<AccountResponse> fallbackGetAccountById(Exception exception) {
+        log.error("Fallback method for getAccountById", exception);
+        return Mono.error(new Exception("Fallback method for getAccountById"));
+    }
+
+    public Mono<AccountResponse> fallbackUpdateAccount(Exception exception) {
+        log.error("Fallback method for updateAccount", exception);
+        return Mono.error(new Exception("Fallback method for updateAccount"));
+    }
+
+    public Mono<Void> fallbackDeleteAccount(Exception exception) {
+        log.error("Fallback method for deleteAccount", exception);
+        return Mono.error(new Exception("Fallback method for deleteAccount"));
+    }
+    public Mono<TransactionAccountResponse> fallbackGetTransactionByAccount(Exception exception) {
+        log.error("Fallback method for getTransactionByAccount", exception);
+        return Mono.error(new Exception("Fallback method for getTransactionByAccount"));
+    }
+
+    public Mono<TransferResponse> fallbackTransferInternal(Exception exception) {
+        log.error("Fallback method for transferInternal", exception);
+        return Mono.error(new Exception("Fallback method for transferInternal"));
+    }
+
+    public Flux<AccountResponse> fallbackGetAccountByClientId(Exception exception) {
+        log.error("Fallback method for getAccountByClientId", exception);
+        return Flux.error(new Exception("Fallback method for getAccountByClientId"));
+    }
+
+    public Mono<TransferResponse> fallbackTransferExternal(Exception exception) {
+        log.error("Fallback method for transferExternal", exception);
+        return Mono.error(new Exception("Fallback method for transferExternal"));
+    }
+    public Flux<BalanceResponse> fallbackGetBalanceByClientId(Exception exception) {
+        log.error("Fallback method for getBalanceByClientId", exception);
+        return Flux.error(new Exception("Fallback method for getBalanceByClientId"));
+    }
+
+    public Mono<TransactionResponse> fallbackDeposit(Exception exception) {
+        log.error("Fallback method for deposit", exception);
+        return Mono.error(new Exception("Fallback method for deposit"));
+    }
+
+    public Mono<TransactionResponse> fallbackWithdraw(Exception exception) {
+        log.error("Fallback method for withdraw", exception);
+        return Mono.error(new Exception("Fallback method for withdraw"));
+    }
     }
 
 

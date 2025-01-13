@@ -10,11 +10,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    @Value("${server.url.client}")
+    @Value("${server.url.webclient}")
     private String clientUrl;
 
-    @Value("${server.url.credit.card}")
-    private String creditCardUrl;
     /**
      * Creates and configures a WebClient bean.
      *
@@ -27,11 +25,5 @@ public class WebClientConfig {
                 .defaultHeader("Content-Type", "application/json")
                 .build();
     }
-    @Bean
-    public WebClient webClientCreditCard() {
-        return WebClient.builder()
-                .baseUrl(creditCardUrl)
-                .defaultHeader("Content-Type", "application/json")
-                .build();
-    }
+
 }

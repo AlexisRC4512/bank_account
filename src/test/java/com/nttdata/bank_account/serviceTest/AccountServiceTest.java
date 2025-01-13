@@ -1,16 +1,20 @@
 package com.nttdata.bank_account.serviceTest;
 
-import com.nttdata.bank_account.model.entity.Account;
-import com.nttdata.bank_account.model.entity.Client;
+import com.nttdata.bank_account.interfaces.TransactionLimitChecker;
+import com.nttdata.bank_account.model.entity.*;
 import com.nttdata.bank_account.model.enums.AccountType;
 import com.nttdata.bank_account.model.enums.TypeClient;
 import com.nttdata.bank_account.model.exception.AccountException;
 import com.nttdata.bank_account.model.request.AccountRequest;
+import com.nttdata.bank_account.model.request.TransactionRequest;
 import com.nttdata.bank_account.model.response.AccountResponse;
+import com.nttdata.bank_account.model.response.BalanceResponse;
+import com.nttdata.bank_account.model.response.TransactionResponse;
 import com.nttdata.bank_account.repository.AccountRepository;
-import com.nttdata.bank_account.service.ClientService;
+import com.nttdata.bank_account.repository.CommissionRepository;
 import com.nttdata.bank_account.service.impl.AccountServiceImpl;
 import com.nttdata.bank_account.strategy.ValidationStrategy;
+import com.nttdata.bank_account.util.TransactionConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +22,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -34,10 +37,15 @@ import static org.mockito.Mockito.when;
 public class AccountServiceTest {
     @Mock
     private AccountRepository accountRepository;
-    @MockBean
-    private ClientService clientService;
+    @Mock
+    private TransactionConverter transactionConverter;
+
+    @Mock
+    private TransactionLimitChecker checker;
     @Mock
     private ValidationStrategy validationStrategy;
+    @Mock
+    private CommissionRepository commissionRepository;
     @InjectMocks
     private AccountServiceImpl accountService;
     private AccountRequest accountRequest;
@@ -63,8 +71,6 @@ public class AccountServiceTest {
         client.setType(TypeClient.PERSONAL.name());
         accountRequest.setClientId("client-id");
         account.setClientId("client-id");
-        validationStrategy = new ValidationStrategy(accountRepository);
-
 
     }
 
@@ -84,7 +90,20 @@ public class AccountServiceTest {
                 .expectErrorMatches(throwable -> throwable instanceof Exception && throwable.getMessage().equals("Error fetching all accounts"))
                 .verify();
     }
-    //Falta validar el client el create
+
+
+
+
+    @Test
+    public void testCreateAccountAccountAlreadyExists() {
+        when(accountRepository.findByNumberAccount(accountRequest.getNumberAccount()))
+                .thenReturn(Mono.just(account));
+
+        StepVerifier.create(accountService.createAccount(accountRequest))
+                .expectError(AccountException.class)
+                .verify();
+    }
+
     @Test
     public void testCreateAccountInvalidClient() {
         Mono<AccountResponse> result = accountService.createAccount(null);
@@ -160,5 +179,39 @@ public class AccountServiceTest {
                 .expectErrorMatches(throwable -> throwable instanceof Exception && throwable.getMessage().equals("Error deleting account"))
                 .verify();
     }
+    @Test
+    public void testWithdrawInsufficientFunds() {
+        String idAccount = "accountId";
+        TransactionRequest transactionRequest = new TransactionRequest();
+        transactionRequest.setAmount(100.2);
+
+        Account account = new Account();
+        account.setBalance(50);
+
+        when(accountRepository.findById(idAccount)).thenReturn(Mono.just(account));
+
+        Mono<TransactionResponse> result = accountService.withdraw(idAccount, transactionRequest);
+
+        StepVerifier.create(result)
+                .expectError(Exception.class)
+                .verify();
+    }
+    @Test
+    public void testGetBalanceByClientIdSuccess() {
+        String idClient = "clientId";
+
+        Account account = new Account();
+        account.setClientId(idClient);
+        account.setBalance(100);
+
+        when(accountRepository.findByClientId(idClient)).thenReturn(Flux.just(account));
+
+        Flux<BalanceResponse> result = accountService.getBalanceByClientId(idClient);
+
+        StepVerifier.create(result)
+                .expectNextMatches(response -> response != null)
+                .verifyComplete();
+    }
+
 
 }

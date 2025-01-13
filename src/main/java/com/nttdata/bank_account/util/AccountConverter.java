@@ -8,6 +8,7 @@ import com.nttdata.bank_account.model.request.AccountRequest;
 import com.nttdata.bank_account.model.response.AccountResponse;
 
 import java.util.Date;
+import java.util.UUID;
 
 
 public class AccountConverter {
@@ -31,6 +32,7 @@ public class AccountConverter {
     public static Account toAccount(AccountRequest request) {
         AccountFactory accountFactory = new AccountFactory();
         Account account = new Account();
+        account.setId(UUID.randomUUID().toString());
         account.setType(request.getType());
         account.setBalance(request.getBalance());
         account.setOpeningDate(new Date());

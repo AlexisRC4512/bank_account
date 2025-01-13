@@ -21,5 +21,5 @@ public interface AccountService {
     Mono<TransactionAccountResponse>getTransactionByAccount(String idAccount);
     Mono<TransferResponse>transferInternal(TransferRequest request);
     Mono<TransferResponse>transferExternal(TransferRequest request);
-
+    Flux<AccountResponse>getAccountByClientId(String clientId);
 }
