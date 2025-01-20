@@ -1,5 +1,6 @@
 package com.nttdata.bank_account.controller;
 
+import com.nttdata.bank_account.api.ApiApi;
 import com.nttdata.bank_account.model.entity.Commission;
 import com.nttdata.bank_account.model.request.AccountRequest;
 import com.nttdata.bank_account.model.request.TransactionRequest;
@@ -7,7 +8,7 @@ import com.nttdata.bank_account.model.request.TransferRequest;
 import com.nttdata.bank_account.model.response.*;
 import com.nttdata.bank_account.service.AccountService;
 import com.nttdata.bank_account.service.CommissionService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -18,12 +19,11 @@ import java.util.Date;
 
 @RestController
 @RequestMapping("/api/v1/account")
-public class AccountController {
+@RequiredArgsConstructor
+public class AccountController implements ApiApi {
 
-    @Autowired
-    private AccountService accountService;
-    @Autowired
-    private CommissionService commissionService;
+    private final AccountService accountService;
+    private final CommissionService commissionService;
 
     @GetMapping
     public Flux<AccountResponse> getAllAccounts() {
@@ -31,8 +31,8 @@ public class AccountController {
     }
 
     @PostMapping
-    public Mono<AccountResponse> createAccount(@RequestBody AccountRequest account) {
-        return accountService.createAccount(account);
+    public Mono<AccountResponse> createAccount(@RequestBody AccountRequest account , @RequestHeader("Authorization") String authorizationHeader) {
+        return accountService.createAccount(account,authorizationHeader);
     }
 
     @GetMapping("/{id_account}")

@@ -1,5 +1,8 @@
 package com.nttdata.bank_account.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 import com.nttdata.bank_account.interfaces.TransactionLimitChecker;
 import com.nttdata.bank_account.model.entity.Account;
 import com.nttdata.bank_account.model.entity.Client;
@@ -7,6 +10,8 @@ import com.nttdata.bank_account.model.entity.Transaction;
 import com.nttdata.bank_account.model.entity.Commission;
 import com.nttdata.bank_account.model.enums.SubTypeClient;
 import com.nttdata.bank_account.model.enums.TypeTransaction;
+import com.nttdata.bank_account.model.events.CompleteEvent;
+import com.nttdata.bank_account.model.events.TransactionEvent;
 import com.nttdata.bank_account.model.exception.AccountException;
 import com.nttdata.bank_account.model.exception.AccountNotFoundException;
 import com.nttdata.bank_account.model.exception.InsufficientFundsException;
@@ -27,16 +32,17 @@ import com.nttdata.bank_account.util.TransactionConverter;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static com.nttdata.bank_account.util.constans.ConstantsMessage.*;
 
 
 /**
@@ -45,19 +51,22 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class AccountServiceImpl implements AccountService {
-    private  AccountRepository accountRepository;
-    private  ClientService clientService;
+    private   AccountRepository accountRepository;
+    private   ClientService clientService;
     private  ValidationStrategy validationStrategy;
     private CommissionRepository commissionRepository;
     private  CreditCardService creditCardService;
+    private  KafkaTemplate<String, String> kafkaTemplate;
 
-    public AccountServiceImpl(AccountRepository accountRepository, ClientService clientService, ValidationStrategy validationStrategy, CommissionRepository commissionRepository, CreditCardService creditCardService) {
+    public AccountServiceImpl(AccountRepository accountRepository, ClientService clientService, ValidationStrategy validationStrategy, CommissionRepository commissionRepository, CreditCardService creditCardService, KafkaTemplate<String, String> kafkaTemplate) {
         this.accountRepository = accountRepository;
         this.clientService = clientService;
         this.validationStrategy = validationStrategy;
         this.commissionRepository = commissionRepository;
         this.creditCardService = creditCardService;
+        this.kafkaTemplate = kafkaTemplate;
     }
+
 
     /**
      * Retrieves all accounts.
@@ -83,16 +92,16 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @CircuitBreaker(name = "bank-account", fallbackMethod = "fallbackCreateAccount")
     @TimeLimiter(name = "bank-account")
-    public Mono<AccountResponse> createAccount(AccountRequest account) {
+    public Mono<AccountResponse> createAccount(AccountRequest account ,String authorizationHeader) {
         if (account == null) {
-            log.warn("Invalid client account: {}", account);
-            return Mono.error(new AccountException("Invalid client data"));
+            log.warn(ACCOUNT_INVALID, account);
+            return Mono.error(new AccountException(ACCOUNT_INVALID_DATA));
         }
         Mono<Account> accountMonoNumberAccountValidator = accountRepository.findByNumberAccount(account.getNumberAccount());
         return accountMonoNumberAccountValidator
                 .hasElement()
                 .flatMap(hasAccount -> {
-                    if (hasAccount) {
+                    if (Boolean.TRUE.equals(hasAccount)) {
                         return Mono.error(new AccountException("That account number already exists"));
                     } else {
                         log.info("Creating new account: {}", account.getType());
@@ -101,8 +110,8 @@ public class AccountServiceImpl implements AccountService {
                                 .map(Enum::name)
                                 .collect(Collectors.toList());
                         Account accountObj = AccountConverter.toAccount(account);
-                        Mono<Client> clientMono = clientService.getClientById(accountObj.getClientId());
-                        return clientMono.flatMap(client -> validateAndSaveAccount(client, accountObj, subTypeNames))
+                        Mono<Client> clientMono = clientService.getClientById(accountObj.getClientId(),authorizationHeader);
+                        return clientMono.flatMap(client -> validateAndSaveAccount(client, accountObj, subTypeNames,authorizationHeader))
                                 .switchIfEmpty(Mono.error(new AccountNotFoundException("account not found with Client id: ")))
                                 .doOnError(e -> log.error("Error creating account", e))
                                 .onErrorMap(e -> new Exception("Error creating account", e));
@@ -110,13 +119,13 @@ public class AccountServiceImpl implements AccountService {
                 });
     }
 
-    private Mono<AccountResponse> validateAndSaveAccount(Client client, Account accountObj ,List<String>listSubType) {
+    private Mono<AccountResponse> validateAndSaveAccount(Client client, Account accountObj ,List<String>listSubType ,String authorizationHeader) {
         String clientType = client.getType();
         Function<Account, Mono<AccountResponse>> validationFunction = validationStrategy.validationStrategies.get(clientType);
 
         if (validationFunction != null) {
             if (listSubType.contains(client.getSubType())) {
-                return creditCardService.getClientById(accountObj.getClientId())
+                return creditCardService.getClientById(accountObj.getClientId(),authorizationHeader)
                         .collectList()
                         .flatMap(creditCardList -> {
                             return Flux.fromIterable(creditCardList)
@@ -143,7 +152,7 @@ public class AccountServiceImpl implements AccountService {
         log.info("Fetching account with id: {}", id);
         return accountRepository.findById(id)
                 .map(AccountConverter::toAccountResponse)
-                .switchIfEmpty(Mono.error(new AccountNotFoundException("account not found with id: " + id)))
+                .switchIfEmpty(Mono.error(new AccountNotFoundException(ACCOUNT_NOT_FOUND_ID + id)))
                 .doOnError(e -> log.error("Error fetching account with id: {}", id, e))
                 .onErrorMap(e -> new Exception("Error fetching account by id", e));
     }
@@ -167,7 +176,7 @@ public class AccountServiceImpl implements AccountService {
                     return accountRepository.save(updatedAccount);
                 })
                 .map(AccountConverter::toAccountResponse)
-                .switchIfEmpty(Mono.error(new AccountNotFoundException("account not found with id: \" + id")))
+                .switchIfEmpty(Mono.error(new AccountNotFoundException(ACCOUNT_NOT_FOUND_ID)))
                 .doOnError(e -> log.error("Error updating account with id: {}", id, e))
                 .onErrorMap(e -> new Exception("Error updating account", e));
     }
@@ -184,7 +193,7 @@ public class AccountServiceImpl implements AccountService {
     public Mono<Void> deleteAccount(String id) {
         log.info("Deleting account with id: {}", id);
         return accountRepository.findById(id)
-                .switchIfEmpty(Mono.error(new AccountNotFoundException("account not found with id: \" + id")))
+                .switchIfEmpty(Mono.error(new AccountNotFoundException(ACCOUNT_NOT_FOUND_ID)))
                 .flatMap(existingAccount -> accountRepository.delete(existingAccount))
                 .doOnError(e -> log.error("Error deleting account with id: {}", id, e))
                 .onErrorMap(e -> new Exception("Error deleting account", e));
@@ -202,8 +211,8 @@ public class AccountServiceImpl implements AccountService {
     public Mono<TransactionResponse> withdraw(String idAccount, TransactionRequest transactionRequest) {
         log.info("Witdraw mount about account");
         if (idAccount.isEmpty()) {
-            log.warn("Invalid client account: {}", idAccount);
-            return Mono.error(new AccountException("Invalid client data"));
+            log.warn(ACCOUNT_INVALID, idAccount);
+            return Mono.error(new AccountException(ACCOUNT_INVALID_DATA));
         }
         return accountRepository.findById(idAccount)
                 .flatMap(account -> {
@@ -218,7 +227,7 @@ public class AccountServiceImpl implements AccountService {
                     account.setBalance(Math.round(account.getBalance() - transactionRequest.getAmount()));
                     Mono<Transaction> transactionUpdate = TransactionConverter.toTransaction(transactionRequest, account.getClientId(), TypeTransaction.WITHDRAWAL, "new Transaction");
                     return updateTransaction( transactionUpdate,account);
-                }).switchIfEmpty(Mono.error(new AccountNotFoundException("account not found with id: \" + id")))
+                }).switchIfEmpty(Mono.error(new AccountNotFoundException(ACCOUNT_NOT_FOUND_ID)))
                 .doOnError(e -> log.error("Error withdrawing ", e))
                 .onErrorMap(e -> new Exception("Error withdrawing account", e));
 
@@ -236,8 +245,8 @@ public class AccountServiceImpl implements AccountService {
     public Mono<TransactionResponse> deposit(String idAccount, TransactionRequest transactionRequest) {
         log.info("deposit mount about account");
         if (idAccount.isEmpty()) {
-            log.warn("Invalid client account: {}", idAccount);
-            return Mono.error(new AccountException("Invalid client data"));
+            log.warn(ACCOUNT_INVALID, idAccount);
+            return Mono.error(new AccountException(ACCOUNT_INVALID_DATA));
         }
         return accountRepository.findById(idAccount)
                 .flatMap(account -> {
@@ -354,7 +363,66 @@ public class AccountServiceImpl implements AccountService {
                 .onErrorMap(e -> new Exception("Error fetching account by Client id", e));
 
     }
+    @KafkaListener(id = "myConsumer", topics = "bootcoin-pay-transfer", groupId = "springboot-group-1", autoStartup = "true")
+    public void listenTransfer(String message) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Gson gson = new Gson();
+        TransactionEvent transactionEvent = objectMapper.readValue(message, TransactionEvent.class);
 
+        log.info("Message received from Kafka: {}", message);
+        CompleteEvent completeEvent = new CompleteEvent();
+        completeEvent.setIdPay(transactionEvent.getIdPay());
+        completeEvent.setIdPurseBuy(transactionEvent.getIdPurseBuy());
+        completeEvent.setIdPurseSeller(transactionEvent.getIdPurseSeller());
+        completeEvent.setDate(transactionEvent.getDate());
+        completeEvent.setAmount(transactionEvent.getAmount());
+        completeEvent.setIdTransaction(transactionEvent.getIdTransaction());
+
+        accountRepository.findByNumberAccount(Integer.parseInt(transactionEvent.getNumberAccountSeller()))
+                .flatMap(account -> {
+                    completeEvent.setState("Success");
+                    String accountId = account.getId();
+                    log.info("Account ID: {}", accountId);
+                    updateAccountWhitdraw(accountId, transactionEvent);
+                    String completeEventJson = gson.toJson(completeEvent);
+                    log.info("Sending message to Kafka: {}", completeEventJson);
+                    kafkaTemplate.send("bootcoin-pay-transfer-complete", completeEventJson);
+                    return Mono.just(account);
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.error(ACCOUNT_NOT_FOUND, transactionEvent);
+                    handleError(transactionEvent, gson);
+                    return Mono.empty();
+                }))
+                .onErrorResume(e -> {
+                    log.error(ACCOUNT_NOT_FOUND, message, e);
+                    handleError(transactionEvent, gson);
+                    return Mono.empty();
+                })
+                .subscribe();
+    }
+    private Mono<Void> handleError(TransactionEvent transactionEvent, Gson gson) {
+        log.error(ACCOUNT_NOT_FOUND, transactionEvent);
+        CompleteEvent errorEvent = new CompleteEvent();
+        errorEvent.setIdPay(transactionEvent.getIdPay());
+        errorEvent.setIdPurseBuy(transactionEvent.getIdPurseBuy());
+        errorEvent.setIdPurseSeller(transactionEvent.getIdPurseSeller());
+        errorEvent.setDate(transactionEvent.getDate());
+        errorEvent.setAmount(transactionEvent.getAmount());
+        errorEvent.setState("Error");
+        errorEvent.setIdTransaction(transactionEvent.getIdTransaction());
+        kafkaTemplate.send("bootcoin-pay-transfer-complete", gson.toJson(errorEvent));
+        return Mono.empty();
+    }
+    public void updateAccountWhitdraw(String idAccound,TransactionEvent transactionEvent) {
+        TransactionRequest transactionRequest = new TransactionRequest();
+        transactionRequest.setAmount(transactionEvent.getAmount());
+        deposit(idAccound, transactionRequest)
+                .subscribe(
+                        result -> log.info("Deposit succeeded for account {}", idAccound),
+                        error -> log.error("Deposit failed for account {}", idAccound, error)
+                );
+    }
     /**
      * Updates the account with a new transaction and converts it to a TransactionResponse.
      *
@@ -387,7 +455,7 @@ public class AccountServiceImpl implements AccountService {
 
     public Flux<AccountResponse> fallbackGetAllAccounts(Exception exception) {
         log.error("Fallback method for getAllAccounts", exception);
-        return Flux.error(new Exception("Fallback method for createAccount"));
+        return Flux.error(new Exception("Fallback method for getAllAccounts"));
     }
 
     public Mono<AccountResponse> fallbackCreateAccount(Exception exception) {

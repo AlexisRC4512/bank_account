@@ -12,6 +12,7 @@ import com.nttdata.bank_account.model.response.BalanceResponse;
 import com.nttdata.bank_account.model.response.TransactionResponse;
 import com.nttdata.bank_account.repository.AccountRepository;
 import com.nttdata.bank_account.repository.CommissionRepository;
+import com.nttdata.bank_account.service.ClientService;
 import com.nttdata.bank_account.service.impl.AccountServiceImpl;
 import com.nttdata.bank_account.strategy.ValidationStrategy;
 import com.nttdata.bank_account.util.TransactionConverter;
@@ -25,11 +26,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
-
 import java.util.Date;
 import java.util.List;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -39,7 +37,8 @@ public class AccountServiceTest {
     private AccountRepository accountRepository;
     @Mock
     private TransactionConverter transactionConverter;
-
+    @Mock
+    private ClientService clientService;
     @Mock
     private TransactionLimitChecker checker;
     @Mock
@@ -75,7 +74,7 @@ public class AccountServiceTest {
     }
 
     @Test
-    public void testGetAllAccounts() {
+     void testGetAllAccounts() {
         when(accountRepository.findAll()).thenReturn(Flux.just(account));
 
         StepVerifier.create(accountService.getAllAccounts())
@@ -83,7 +82,7 @@ public class AccountServiceTest {
                 .verifyComplete();
     }
     @Test
-    public void testGetAllAccountsError() {
+     void testGetAllAccountsError() {
         when(accountRepository.findAll()).thenReturn(Flux.error(new RuntimeException("Database error")));
 
         StepVerifier.create(accountService.getAllAccounts())
@@ -95,18 +94,36 @@ public class AccountServiceTest {
 
 
     @Test
-    public void testCreateAccountAccountAlreadyExists() {
+     void testCreateAccountAccountAlreadyExists() {
+        String authorizationHeader = "Bearer your_jwt_token";
+
         when(accountRepository.findByNumberAccount(accountRequest.getNumberAccount()))
                 .thenReturn(Mono.just(account));
-
-        StepVerifier.create(accountService.createAccount(accountRequest))
+        StepVerifier.create(accountService.createAccount(accountRequest, authorizationHeader))
                 .expectError(AccountException.class)
                 .verify();
     }
 
+
     @Test
-    public void testCreateAccountInvalidClient() {
-        Mono<AccountResponse> result = accountService.createAccount(null);
+     void createAccountShouldThrowExceptionWhenAccountAlreadyExists() {
+        when(accountRepository.findByNumberAccount(accountRequest.getNumberAccount()))
+                .thenReturn(Mono.just(account));
+
+        Mono<AccountResponse> result = accountService.createAccount(accountRequest, "auth-header");
+
+        StepVerifier.create(result)
+                .expectErrorMatches(throwable -> throwable instanceof AccountException &&
+                        throwable.getMessage().equals("That account number already exists"))
+                .verify();
+    }
+
+
+    @Test
+     void testCreateAccountInvalidClient() {
+        String authorizationHeader = "Bearer your_jwt_token";
+
+        Mono<AccountResponse> result = accountService.createAccount(null, authorizationHeader);
 
         StepVerifier.create(result)
                 .expectError(AccountException.class)
@@ -114,7 +131,7 @@ public class AccountServiceTest {
     }
 
     @Test
-    public void testGetAccountById() {
+     void testGetAccountById() {
         when(accountRepository.findById("12345")).thenReturn(Mono.just(account));
 
         StepVerifier.create(accountService.getAccountById("12345"))
@@ -123,7 +140,7 @@ public class AccountServiceTest {
     }
 
     @Test
-    public void testGetAccountByIdError() {
+     void testGetAccountByIdError() {
         when(accountRepository.findById("12345")).thenReturn(Mono.error(new AccountException("Account not found")));
 
         StepVerifier.create(accountService.getAccountById("12345"))
@@ -132,7 +149,7 @@ public class AccountServiceTest {
     }
 
     @Test
-    public void testUpdateAccount() {
+     void testUpdateAccount() {
         when(accountRepository.findById("12345")).thenReturn(Mono.just(account));
         when(accountRepository.save(any(Account.class))).thenReturn(Mono.just(account));
 
@@ -142,7 +159,7 @@ public class AccountServiceTest {
     }
 
     @Test
-    public void testUpdateAccountError() {
+     void testUpdateAccountError() {
         when(accountRepository.findById("12345")).thenReturn(Mono.empty());
 
         StepVerifier.create(accountService.updateAccount("12345", accountRequest))
@@ -152,7 +169,7 @@ public class AccountServiceTest {
     }
 
     @Test
-    public void testDeleteAccount() {
+     void testDeleteAccount() {
 
        Account account2 = new Account();
         account2.setId("12346");
@@ -172,7 +189,7 @@ public class AccountServiceTest {
     }
 
     @Test
-    public void testDeleteAccountError() {
+     void testDeleteAccountError() {
         when(accountRepository.findById("12345")).thenReturn(Mono.error(new RuntimeException("Database error")));
 
         StepVerifier.create(accountService.deleteAccount("12345"))
@@ -180,7 +197,7 @@ public class AccountServiceTest {
                 .verify();
     }
     @Test
-    public void testWithdrawInsufficientFunds() {
+     void testWithdrawInsufficientFunds() {
         String idAccount = "accountId";
         TransactionRequest transactionRequest = new TransactionRequest();
         transactionRequest.setAmount(100.2);
@@ -197,7 +214,7 @@ public class AccountServiceTest {
                 .verify();
     }
     @Test
-    public void testGetBalanceByClientIdSuccess() {
+     void testGetBalanceByClientIdSuccess() {
         String idClient = "clientId";
 
         Account account = new Account();
