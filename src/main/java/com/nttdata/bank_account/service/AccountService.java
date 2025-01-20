@@ -11,7 +11,7 @@ import reactor.core.publisher.Mono;
 
 public interface AccountService {
     Flux<AccountResponse> getAllAccounts();
-    Mono<AccountResponse> createAccount(AccountRequest account);
+    Mono<AccountResponse> createAccount(AccountRequest account ,String authorizationHeader);
     Mono<AccountResponse> getAccountById(String id);
     Mono<AccountResponse> updateAccount(String id, AccountRequest account);
     Mono<Void> deleteAccount(String id);

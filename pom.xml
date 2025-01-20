@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.7.5</version>
+		<version>3.3.7</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.nttdata</groupId>
@@ -27,19 +27,35 @@
 		<url/>
 	</scm>
 	<properties>
-		<java.version>11</java.version>
-		<spring-cloud.version>2021.0.6</spring-cloud.version>
+		<java.version>17</java.version>
+		<spring-cloud.version>2023.0.4</spring-cloud.version>
 		<sonar.host.url>http://localhost:9001</sonar.host.url>
-		<sonar.token>sqp_45e8ba30c5ed721cb3ea8acf03c276f04f15c40d</sonar.token>
-		<sonar.projectKey>bank_account</sonar.projectKey>
-		<sonar.projectName>bank_account</sonar.projectName>
-		<sonar.exclusions>pom.xml</sonar.exclusions>
+		<sonar.token>sqp_ba2e98ff29b68f4bc90d37f25b213a65ce8c15c0</sonar.token>
+		<sonar.projectKey>account</sonar.projectKey>
+		<sonar.projectName>account</sonar.projectName>
+		<sonar.exclusions>pom.xml,**/model/**</sonar.exclusions>
 	</properties>
 	<dependencies>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20240303</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-mongodb-reactive</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients -->
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka-clients</artifactId>
+			<version>3.9.0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webflux</artifactId>
@@ -64,14 +80,15 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>1.7.36</version>
-		</dependency>
-		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
-			<version>1.2.11</version>
+			<version>1.4.12</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.11.0</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/io.springfox/springfox-swagger2 -->
 		<dependency>
@@ -236,7 +253,7 @@
 				<artifactId>sonar-maven-plugin</artifactId>
 				<version>3.8.0.2131</version>
 			</plugin>
-			<!--<plugin>
+		<plugin>
 				<groupId>org.openapitools</groupId>
 				<artifactId>openapi-generator-maven-plugin</artifactId>
 				<version>5.1.0</version>
@@ -246,19 +263,21 @@
 							<goal>generate</goal>
 						</goals>
 						<configuration>
+							<skipValidateSpec>true</skipValidateSpec>
 							<inputSpec>${project.basedir}/src/main/resources/bank_account-api.yml</inputSpec>
 							<generatorName>spring</generatorName>
 							<apiPackage>com.nttdata.bank_account.api</apiPackage>
 							<modelPackage>com.nttdata.bank_account.model</modelPackage>
 							<supportingFilesToGenerate>ApiUtil.java</supportingFilesToGenerate>
 							<configOptions>
+								<reactive>true</reactive>
 								<delegatePattern>true</delegatePattern>
 							</configOptions>
 							<enablePostProcessFile>true</enablePostProcessFile>
 						</configuration>
 					</execution>
 				</executions>
-			</plugin>-->
+			</plugin>
 		</plugins>
 	</build>
 
