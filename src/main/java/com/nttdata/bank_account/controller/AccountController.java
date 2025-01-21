@@ -1,6 +1,6 @@
 package com.nttdata.bank_account.controller;
 
-import com.nttdata.bank_account.api.ApiApi;
+import com.nttdata.bank_account.api.V1Api;
 import com.nttdata.bank_account.model.entity.Commission;
 import com.nttdata.bank_account.model.request.AccountRequest;
 import com.nttdata.bank_account.model.request.TransactionRequest;
@@ -20,7 +20,7 @@ import java.util.Date;
 @RestController
 @RequestMapping("/api/v1/account")
 @RequiredArgsConstructor
-public class AccountController implements ApiApi {
+public class AccountController implements V1Api {
 
     private final AccountService accountService;
     private final CommissionService commissionService;
